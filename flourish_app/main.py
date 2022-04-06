@@ -21,11 +21,7 @@ CORS(main)
 def hello():
     return "Hello World!"
 
-#@login_manager.user_loader  used to reload object from user id stored in session
-def load_user(user_id):
-    return Users.query.get(int(user_id))
 
-#working
 @main.route("/login", methods = ['POST', "GET"])
 def login():
     req = request.get_json()
@@ -60,12 +56,6 @@ def register():
     db.session.commit()
     return f"New user was added!", 201
         
-# needs fixing
-@main.route('/logout', methods = ["GET", "POST"])
-@login_required
-def logout():
-    logout_user  
-    return f"Logged out sucessfully!", 201
 
 # get all products or post a product
 @main.route('/products', methods=['GET','POST'])
@@ -88,10 +78,8 @@ def getAllProducts():
                     products_to_send_arr.append(i)
 
             return  jsonify(products_to_send_arr)
-        except exceptions.NotFound:
-            raise exceptions.NotFound("There are no products to view at the moment!")
-        # except:
-        #     raise exceptions.InternalServerError()
+        except:
+            raise exceptions.InternalServerError()
 
     elif request.method == 'POST':
     # format of request 
@@ -125,45 +113,38 @@ def getProductById(product_id):
         return  jsonify([product.serialize()])
     except exceptions.NotFound:
         raise exceptions.NotFound("Product not found!")
-    except:
-        raise exceptions.InternalServerError()
+
 
 # get products by category
 @main.get('/products/category/<int:category_id>')
 ##@jwt_required()
 def getProductByCategoryId(category_id):
-    try: 
-        products = db.session.query(Products).filter(Products.category_id == category_id)
-        return jsonify([e.serialize() for e in products])
-    except exceptions.NotFound:
-        raise exceptions.NotFound("Product not found!")
-    except:
-        raise exceptions.InternalServerError()
+    products = db.session.query(Products).filter(Products.category_id == category_id)
+    array = [e.serialize() for e in products]
+    if len(array) != 0:
+        return jsonify(array)
+    else:
+        return exceptions.NotFound("Category does not exist, or there are no products in this category!")
+
 
 # get all users
 @main.get('/users')
 ##@jwt_required()
 def getAllUsers():
-    try: 
-        allUsers = Users.query.all()
-        return  jsonify([e.serialize() for e in allUsers])
-    except exceptions.NotFound:
-        raise exceptions.NotFound("There are no users to view at the moment!")
-    except:
-        raise exceptions.InternalServerError()
+    allUsers = Users.query.all()
+    return  jsonify([e.serialize() for e in allUsers])
+
 
 # get all products a user has posted
 @main.get('/users/<int:user_id>/products')
 #@jwt_required()
 def getAllUsersProductsById(user_id):
-    try: 
-        allUsersProducts = db.session.query(Products).filter(Products.user_id == user_id)
-        return  jsonify([e.serialize() for e in allUsersProducts])
-    except exceptions.NotFound:
-        raise exceptions.NotFound("There are no users to view at the moment!")
-    except:
-        raise exceptions.InternalServerError()
-
+    allUsersProducts = db.session.query(Products).filter(Products.user_id == user_id)
+    array = [e.serialize() for e in allUsersProducts]
+    if len(array) != 0:
+        return jsonify(array)
+    else:
+        return exceptions.NotFound("This user had no products or they do no exist!")
 # get/delete user by id
 @main.route('/users/<int:user_id>', methods=['GET', 'DELETE'])
 #@jwt_required()
@@ -174,8 +155,6 @@ def handleUserById(user_id):
             return  jsonify([user.serialize()])
         except exceptions.NotFound:
             raise exceptions.NotFound("User not found!")
-        except:
-            raise exceptions.InternalServerError()
     elif request.method == 'DELETE':
         try: 
             user = Users.query.get_or_404(user_id)
@@ -262,25 +241,21 @@ def vote():
 #@jwt_required()
 def getAllRatings():
     if request.method == 'GET':
-        try:
-            allProductRatings = Productratings.query.all()
-            return jsonify([e.serialize() for e in allProductRatings])
-        except exceptions.NotFound:
-            raise exceptions.NotFound("Product ratings not found!")
-        except:
-            raise exceptions.InternalServerError()
+        allProductRatings = Productratings.query.all()
+        return jsonify([e.serialize() for e in allProductRatings])
+
 
 # get ratings by id of user rating them
 @main.get('/ratings/users/<int:user_id>')
 #@jwt_required
 def getRatingByUserId(user_id):
-    try: 
         rating = db.session.query(Productratings).filter(Productratings.user_id == user_id)
-        return  jsonify([e.serialize() for e in rating])
-    except exceptions.NotFound:
-        raise exceptions.NotFound("There are no ratings to view at the moment!")
-    except:
-        raise exceptions.InternalServerError()
+        array = [e.serialize() for e in rating]
+        if len(array) != 0:
+            return jsonify(array)
+        else:
+            return exceptions.NotFound("There are no ratings to view at the moment!")
+
 
 # get ratings by product id and id of user rating them
 @main.get('/ratings/users/<int:user_id>/products/<int:product_id>')
