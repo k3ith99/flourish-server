@@ -47,7 +47,7 @@ class Products(db.Model):
     expiry = db.Column(db.String(15))
     description = db.Column(db.String(100))
     image = db.Column(db.String(500))
-    date_time = db.Column(db.Date, nullable=False)
+    date_time = db.Column(db.DateTime, nullable=False)
 
     def __init__(self, user_id, category_id, is_retail, longitude, latitude, price, expiry, description, image):
         self.user_id = user_id
@@ -59,7 +59,7 @@ class Products(db.Model):
         self.expiry = expiry
         self.description = description
         self.image = image
-        self.date_time = datetime.utcnow().strftime('%m-%d-%Y')
+        self.date_time = datetime.utcnow()
 
     def __repr__(self):
         return '<id {}>'.format(self.product_id)
@@ -106,9 +106,11 @@ class Productratings(db.Model):
 class Category(db.Model):
     category_id = db.Column(db.Integer, primary_key=True)
     category_name  = db.Column(db.String(100))
+    color = db.Column(db.String(7))
 
-    def __init__(self, category_name):
+    def __init__(self, category_name, color):
         self.category_name = category_name
+        self.color = color
 
     def __repr__(self):
         return '<id {}>'.format(self.category_id)
@@ -116,5 +118,6 @@ class Category(db.Model):
     def serialize(self):
         return {
             'category_id': self.category_id, 
-            'category_name': self.category_name
+            'category_name': self.category_name,
+            'color': self.color
         }

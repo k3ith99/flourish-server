@@ -40,7 +40,7 @@ def login():
                 "refresh token": refresh_token
                 }
             )
-    return f"Login sucessful!", 200
+    return f"Login sucessful!", 201
             
 #working
 @main.route("/register", methods = ['POST', "GET"])
@@ -77,10 +77,10 @@ def getAllProducts():
 
             products_array = [e.serialize() for e in allProducts]
 
-            date = datetime.utcnow()
-            date_now = datetime.date(date)
+            date_now = datetime.utcnow()
+            print("date_now", date_now)
             date_minus_1 = date_now - timedelta(days=1)
-
+            print("minus", date_minus_1)
             products_to_send_arr = []
 
             for i in products_array:
@@ -90,12 +90,12 @@ def getAllProducts():
             return  jsonify(products_to_send_arr)
         except exceptions.NotFound:
             raise exceptions.NotFound("There are no products to view at the moment!")
-        except:
-            raise exceptions.InternalServerError()
+        # except:
+        #     raise exceptions.InternalServerError()
 
     elif request.method == 'POST':
     # format of request 
-    # { "user_id": 1, "description": "Tomatoes", "category_id": 2, "is_retail": 1, "longitude": 51.5014, "latitude": 0.1419, "price": 2.99, "expiry": "02/04/2022", "image": "LINK"}
+    # { "user_id": 1, "description": "Oranges", "category_id": 5, "is_retail": 0, "longitude": 51.5014, "latitude": 0.1419, "price": 2.99, "expiry": "07/04/2022", "image": "https://imagesvc.meredithcorp.io/v3/mm/image?url=https%3A%2F%2Fstatic.onecms.io%2Fwp-content%2Fuploads%2Fsites%2F19%2F2019%2F01%2F07%2Foranges-hero.jpg&q=60"}
         try:
             req = request.get_json()
             new_product = Products(
@@ -218,22 +218,37 @@ def vote():
 
             id_of_user_they_are_rating = product_they_are_rating['user_id']
 
-            #calculate the rating
-            #count of all productRatings that have the user id
-            all_users_ratings = db.session.query(Productratings).filter(Productratings.user_id == id_of_user_they_are_rating)
+            # get a list of all product ids based on id_of_user_they_are_rating
+            all_product_ids = db.session.query(Products).filter(Products.user_id == id_of_user_they_are_rating)
+
+            # array of all user 2's products
+            all_users_products_array = []
+            for row in all_product_ids:
+                all_users_products_array.append(row.serialize())
+            print("all_users_products_array", all_users_products_array)
+
+            # array of all product ids
+            all_users_products_id_array = []
+            for i in range(0, len(all_users_products_array)):
+                all_users_products_id_array.append(all_users_products_array[i]['product_id'])
+            print("all_users_products_id_array", all_users_products_id_array)
 
             all_users_ratings_array = []
-            for row in all_users_ratings:
-                all_users_ratings_array.append(row.serialize())
+            for i in all_users_products_id_array:
+                all_users_ratings =  db.session.query(Productratings).filter(Productratings.product_id == i)
+                for row in all_users_ratings:
+                    all_users_ratings_array.append(row.serialize())
+            print("all_users_ratings_array", all_users_ratings_array)
 
-            count = db.session.query(Productratings).filter(Productratings.user_id == id_of_user_they_are_rating).count()
-            #for the total of these productRatings add up all the rating keys / count * 100
+            count = len(all_users_ratings_array)
 
             rating_count = 0
             for i in range(0, len(all_users_ratings_array)):
                 rating_count = rating_count + all_users_ratings_array[i]['rating']
+            print("rating_count", rating_count)
 
             updated_rating = (rating_count/count)
+            print("updated_rating", updated_rating)
 
             db.session.query(Users).filter(Users.id == id_of_user_they_are_rating).update({Users.rating: updated_rating})
             db.session.commit()
@@ -286,8 +301,9 @@ def updateLocation(user_id):
     if request.method == 'PATCH':
         try: 
             req = request.get_json()
-            updated_location = req['updated_location']
-            db.session.query(Users).filter(Users.id == user_id).update({Users.location: updated_location})
+            updated_longitude = req['updated_longitude']
+            updated_latitude = req['updated_latitude']
+            db.session.query(Users).filter(Users.id == user_id).update({Users.longitude: updated_longitude, Users.latitude: updated_latitude})
             db.session.commit()
             return f"Location sucessfully updated!", 201
         except:
@@ -304,5 +320,16 @@ def updateRadius(user_id):
             db.session.query(Users).filter(Users.id == user_id).update({Users.radius: updated_radius})
             db.session.commit()
             return f"Radius sucessfully updated!", 201
+        except:
+            raise exceptions.InternalServerError()
+
+@main.get('/products/categories')
+def getCategories():
+    if request.method == 'GET':
+        try:
+            allCategories = Category.query.all()
+            return jsonify([e.serialize() for e in allCategories])
+        except exceptions.NotFound:
+            raise exceptions.NotFound("Categories not found!")
         except:
             raise exceptions.InternalServerError()
